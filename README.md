@@ -1,6 +1,6 @@
 # @checked/browser
 
-Check’d production monitoring for the browser. Zero runtime dependencies, ES2018, under 10 KB gzipped as a script tag.
+Check’d production monitoring for the browser. Zero runtime dependencies, ES2018, under 10 KB gzipped as a script tag. Session replay is opt-in and ships as a separate, lazily loaded bundle (rrweb inside, about 61 KB gzipped) that pages without replay never download.
 
 ## Install
 
@@ -54,6 +54,7 @@ Checked.init({ key: 'ck_pub_...', environment: 'production', release: '1.4.2' })
 | `reportAllVitals` | `false` | otherwise only `poor` vitals are sent |
 | `maxEventsPerPage` | `100` | hard cap per page load, all event types |
 | `flushIntervalMs` | `5000` | |
+| `replay` | off | session replay, see below |
 | `debug` | `false` | logs to `console.warn` with a `[checked]` prefix |
 
 ## API
@@ -68,7 +69,7 @@ Checked.addBreadcrumb({ message, type?, data? })
 Checked.setTag(key, value)               // null or undefined removes it
 Checked.flush()                          // Promise<boolean>, true when the queue is empty
 Checked.close()                          // flushes, then removes every hook
-Checked.attachReplay(recorder)           // see ../README.md, not implemented yet
+Checked.attachReplay(recorder)           // attach a recorder yourself; `replay` in init does this for you
 ```
 
 Calls before `init` (or after `close`, or when Do Not Track disabled the SDK) are no-ops. They are not queued.
@@ -85,6 +86,33 @@ Calls before `init` (or after `close`, or when Do Not Track disabled the SDK) ar
 ## Privacy
 
 Input values are never read. Query strings and hashes are stripped from the page URL, request URLs, breadcrumbs, and URLs inside messages and stack traces (line:col kept). Bearer/Basic tokens and `password=`, `token=`, `api_key=`, `secret=` style pairs are replaced with `[Filtered]`. Messages are cut at 1000 chars, stacks at 8000, breadcrumbs at 300.
+
+## Session replay
+
+```html
+<script src="https://getchecked.twelveai.app/sdk/checked.v1.min.js" data-key="ck_pub_..." data-replay="true"></script>
+```
+
+```ts
+Checked.init({ key, replay: { onErrorSampleRate: 1, sampleRate: 0, load: () => import('@checked/browser/replay') } })
+```
+
+| Option | Default | Script tag | Notes |
+|---|---|---|---|
+| `onErrorSampleRate` | `1` | `data-replay-error-sample-rate` | sessions that keep the last 30 to 60 s in memory and upload it when an error or failed request is captured |
+| `sampleRate` | `0` | `data-replay-sample-rate` | sessions recorded and uploaded from the start |
+| `maskAllText` | `false` | `data-replay-mask-all-text` | inputs are always masked; this masks every text node |
+| `maskSelector` | | `data-replay-mask` | added to `[data-checked-mask]` |
+| `blockSelector` | | `data-replay-block` | added to `[data-checked-block]`; blocked elements become same size placeholders |
+| `recordCanvas` | `false` | | |
+| `maxDurationMinutes` | `60` | `data-replay-max-minutes` | the plan may cap it lower (the server says stop) |
+| `src` | the script's own folder | | URL of `checked-replay.v<version>.min.js`; the script tag build works it out |
+| `load` | | | for bundlers, used instead of `src` |
+| `endpoint` | events endpoint with `/replay` | | |
+
+The core loads the replay bundle with the same version as itself (`checked-replay.v1.1.0.min.js` for core 1.1.0); `checked-replay.v1.min.js` follows 1.x for manual use. `window.CheckedReplay.stop()` (or `stopReplay()` from `@checked/browser/replay`) stops recording, for example when consent is withdrawn.
+
+Privacy defaults: every input, textarea and select masked (passwords as a fixed `********`), no canvas, no cross-origin iframes, no inlined images or fonts, query strings removed from page, link, form and iframe addresses, nothing at all with Do Not Track or Global Privacy Control. Next to the rrweb stream the recorder writes compact action events (what was clicked or typed into, never values, password fields not even their length) that the server uses for the AI summary and "Save as journey".
 
 ## Transport
 

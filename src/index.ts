@@ -6,12 +6,12 @@ import type {
   IdentifyInput,
   MessageLevel,
 } from './types'
-import type { ReplayRecorder } from './replay'
+import { loadReplay, type ReplayRecorder } from './replay'
 import { hasWindow } from './utils'
 import { SDK_VERSION } from './version'
 
 export type * from './types'
-export type { ReplayOptions, ReplayRecorder, ReplayChunk } from './replay'
+export type { ReplayOptions, ReplayRecorder, ReplayChunk, ReplayHost, ReplayClient, ReplayMarkDetail, ReplayModule } from './replay'
 export { SDK_VERSION } from './version'
 
 let client: Client | null = null
@@ -47,6 +47,8 @@ export function init(options: CheckedOptions): void {
     const c = new Client(options)
     c.start()
     client = c
+    const r = options.replay
+    if (r && r.enabled !== false) loadReplay(c, r)
   } catch (e) {
     try {
       if (options && options.debug) console.warn('[checked] init failed', e)
@@ -101,7 +103,7 @@ export function close(): Promise<boolean> {
   }
 }
 
-/** Integration point for the (future) session replay bundle. */
+/** Integration point for the session replay bundle (or a recorder of your own). */
 export function attachReplay(recorder: ReplayRecorder | null): void {
   guard(undefined, (c) => c.attachReplay(recorder))
 }
@@ -122,7 +124,7 @@ export function optionsFromScript(script: HTMLScriptElement): CheckedOptions | n
       endpoint = undefined
     }
   }
-  const rate = d('sample-rate')
+  const num = (v: string | undefined) => (v !== undefined && v !== '' && isFinite(Number(v)) ? Number(v) : undefined)
   const opts: CheckedOptions = {
     key,
     environment: d('env') || d('environment'),
@@ -135,7 +137,10 @@ export function optionsFromScript(script: HTMLScriptElement): CheckedOptions | n
     reportAllVitals: d('report-all-vitals') === 'true',
     debug: d('debug') === 'true',
   }
-  if (rate !== undefined && rate !== '' && isFinite(Number(rate))) opts.sampleRate = Number(rate)
+  const rate = num(d('sample-rate'))
+  if (rate !== undefined) opts.sampleRate = rate
+  // The replay bundle reads the other data-replay-* attributes itself.
+  if (d('replay') === 'true') opts.replay = { src: script.src.replace(/[^/?#]*([?#].*)?$/, 'checked-replay.v' + SDK_VERSION + '.min.js') }
   return opts
 }
 

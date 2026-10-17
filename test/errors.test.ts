@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Checked } from '../src/index'
+import { SDK_VERSION } from '../src/version'
 import { start, settle, errorEvents } from './helpers'
 
 afterEach(async () => {
@@ -23,7 +24,7 @@ describe('error capture', () => {
     expect(h.batches.length).toBe(1)
     const b = h.batches[0]
     expect(b.key).toBe('ck_pub_test')
-    expect(b.sdk).toEqual({ name: 'checked.browser', version: '1.0.0' })
+    expect(b.sdk).toEqual({ name: 'checked.browser', version: SDK_VERSION })
     expect(typeof b.sentAt).toBe('number')
     expect(b.client).toEqual({ dropped: 0 })
     expect(h.ingestUrls[0]).toBe('https://ingest.test/api/v1/ingest/events?key=ck_pub_test')
@@ -200,7 +201,7 @@ describe('error capture', () => {
     expect(h.events().length).toBe(5)
   })
 
-  it('attachReplay sets replayId on error events only', async () => {
+  it('attachReplay sets replayId on error events, not on custom events', async () => {
     const h = start()
     const flush = vi.fn(async () => 'r_1')
     Checked.attachReplay({ replayId: 'r_1', start() {}, stop() {}, flush })
@@ -210,6 +211,6 @@ describe('error capture', () => {
     const evs = h.events()
     expect(evs[0].replayId).toBe('r_1')
     expect(evs[1].replayId).toBeUndefined()
-    expect(flush).toHaveBeenCalledWith('error')
+    expect(flush).toHaveBeenCalledWith('error', { eventId: evs[0].id, message: 'Error: with replay' })
   })
 })

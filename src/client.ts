@@ -14,7 +14,7 @@ import type {
   MetricName,
   Rating,
 } from './types'
-import type { ReplayRecorder } from './replay'
+import type { ReplayHost, ReplayOptions, ReplayRecorder } from './replay'
 import { Transport } from './transport'
 import { parseUserAgent, type ParsedUA } from './ua'
 import {
@@ -92,7 +92,7 @@ export class Client {
   readonly key: string
   readonly endpoint: string
   readonly ingestUrl: string
-  private opts: Required<
+  readonly opts: Required<
     Pick<
       CheckedOptions,
       | 'environment'
@@ -255,7 +255,31 @@ export class Client {
   }
 
   attachReplay(recorder: ReplayRecorder | null): void {
+    if (this.closed && recorder) return recorder.stop()
     this.replay = recorder
+  }
+
+  replayHost(options: ReplayOptions): ReplayHost {
+    const nf = this.nativeFetch
+    return {
+      options,
+      client: this,
+      url: (options.endpoint || this.endpoint.replace(/\/events$/, '/replay')) + '?key=' + encodeURIComponent(this.key),
+      fetch: nf && ((input, init) => nf.call(window, input, init)),
+    }
+  }
+
+  /** Puts the replay id on the event and asks the recorder to upload its buffer. */
+  private linkReplay(ev: CheckedEvent, reason: string, message: string): void {
+    const r = this.replay
+    if (!r) return
+    try {
+      const rid = r.replayId
+      if (rid) ev.replayId = rid
+      void r.flush(reason, { eventId: ev.id, message }).catch(() => null)
+    } catch {
+      /* ignore */
+    }
   }
 
   // ---------------------------------------------------------------- identity
@@ -302,7 +326,7 @@ export class Client {
     }
   }
 
-  private sessionId(): string {
+  sessionId(): string {
     const t = now()
     let s: { id: string; last: number } | null = null
     try {
@@ -371,7 +395,7 @@ export class Client {
     }
   }
 
-  private context(): EventContext & { referrer?: string } {
+  context(): EventContext & { referrer?: string } {
     const ctx: EventContext & { referrer?: string } = {
       browser: this.ua.browser,
       os: this.ua.os,
@@ -483,15 +507,7 @@ export class Client {
       handled: raw.handled,
       mechanism: raw.mechanism,
     }
-    if (this.replay) {
-      try {
-        const rid = this.replay.replayId
-        if (rid) ev.replayId = rid
-        void this.replay.flush('error').catch(() => null)
-      } catch {
-        /* ignore */
-      }
-    }
+    this.linkReplay(ev, 'error', type + ': ' + message)
     return this.dispatch(ev)
   }
 
@@ -526,6 +542,7 @@ export class Client {
     }
     if (rec.errorMessage) request.errorMessage = cleanText(rec.errorMessage, LIMITS.breadcrumb, keep)
     ;(ev as CheckedEvent & { request: unknown }).request = request
+    this.linkReplay(ev, 'request', method + ' ' + request.url + ' ' + (status || 'failed'))
     this.dispatch(ev)
   }
 
