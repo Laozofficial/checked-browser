@@ -2,7 +2,7 @@
 // then copies the IIFE into the frontend's public/sdk folder.
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
@@ -50,13 +50,25 @@ await build({
 const tsc = join(root, 'node_modules', 'typescript', 'bin', 'tsc')
 execFileSync(process.execPath, [tsc, '-p', join(root, 'tsconfig.build.json')], { stdio: 'inherit' })
 
-// Copy to the frontend.
-const publicSdk = resolve(root, '..', '..', 'frontend', 'public', 'sdk')
-mkdirSync(publicSdk, { recursive: true })
+// Copy to the frontend, only inside the Check'd monorepo (the standalone
+// public repo has no frontend, and must never write outside its own folder).
 const iife = join(dist, 'checked.min.js')
-const major = pkg.version.split('.')[0]
-const targets = [`checked.v${major}.min.js`, `checked.v${pkg.version}.min.js`]
-for (const t of targets) copyFileSync(iife, join(publicSdk, t))
+const frontend = resolve(root, '..', '..', 'frontend')
+if (existsSync(join(frontend, 'package.json'))) {
+  const publicSdk = join(frontend, 'public', 'sdk')
+  mkdirSync(publicSdk, { recursive: true })
+  const major = pkg.version.split('.')[0]
+  const built = readFileSync(iife)
+  // The exact-version file is served as immutable for a year: it must never
+  // change once published. Refuse instead of overwriting it; bump the version.
+  const pinned = join(publicSdk, `checked.v${pkg.version}.min.js`)
+  if (existsSync(pinned) && !readFileSync(pinned).equals(built)) {
+    throw new Error(`${pinned} already exists with different content. Bump the version in package.json instead of changing a published file.`)
+  }
+  copyFileSync(iife, pinned)
+  copyFileSync(iife, join(publicSdk, `checked.v${major}.min.js`))
+  console.log(`copied to ${publicSdk}`)
+}
 
 const report = (file) => {
   const buf = readFileSync(file)
@@ -64,7 +76,6 @@ const report = (file) => {
 }
 console.log(`dist/checked.min.js  ${report(iife)}`)
 console.log(`dist/index.mjs       ${report(join(dist, 'index.mjs'))}`)
-console.log(`copied to ${publicSdk}: ${targets.join(', ')}`)
 const gz = gzipSync(readFileSync(iife), { level: 9 }).length
 if (gz > 10 * 1024) {
   console.error(`IIFE gzip size ${gz} bytes is over the 10 KB budget`)
