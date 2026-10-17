@@ -1,4 +1,4 @@
-/** Wire protocol and public option types for @checked/browser. */
+/** Wire protocol and public option types for checkd-browser. */
 import type { ReplayOptions } from './replay'
 
 

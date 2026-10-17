@@ -1,8 +1,8 @@
 /**
- * `@checked/browser/replay`: the session replay recorder. Bundled separately from the core SDK
+ * `checkd-browser/replay`: the session replay recorder. Bundled separately from the core SDK
  * (it carries rrweb), and loaded only when `replay` is set in `Checked.init`.
  *
- *   Checked.init({ key, replay: { onErrorSampleRate: 1, load: () => import('@checked/browser/replay') } })
+ *   Checked.init({ key, replay: { onErrorSampleRate: 1, load: () => import('checkd-browser/replay') } })
  */
 import { record } from 'rrweb'
 import type { ReplayHost, ReplayOptions, ReplayRecorder } from '../replay'

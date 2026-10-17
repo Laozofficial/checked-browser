@@ -29,7 +29,7 @@ export interface ReplayOptions {
   maxDurationMinutes?: number
   /** URL of the replay bundle. The script tag build works it out from its own address. */
   src?: string
-  /** For bundlers: `load: () => import('@checked/browser/replay')`. Used instead of `src`. */
+  /** For bundlers: `load: () => import('checkd-browser/replay')`. Used instead of `src`. */
   load?: () => Promise<unknown>
   /** Full replay ingest URL. Defaults to the events endpoint with `/events` swapped for `/replay`. */
   endpoint?: string

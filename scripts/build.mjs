@@ -1,6 +1,6 @@
 // Builds the browser SDK:
 //   dist/index.mjs + dist/*.d.ts      ESM core (no rrweb)
-//   dist/replay.mjs                   ESM replay recorder (@checked/browser/replay, rrweb bundled)
+//   dist/replay.mjs                   ESM replay recorder (checkd-browser/replay, rrweb bundled)
 //   dist/checked.min.js               IIFE core (window.Checked), 10 KB gzip budget
 //   dist/checked-replay.min.js        IIFE replay recorder (window.CheckedReplay), loaded lazily
 //   dist/checked-player.min.js        rrweb player for the Check’d app's replay viewer (not published)

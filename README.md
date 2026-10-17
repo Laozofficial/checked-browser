@@ -1,4 +1,4 @@
-# @checked/browser
+# checkd-browser
 
 Check’d production monitoring for the browser. Zero runtime dependencies, ES2018, under 10 KB gzipped as a script tag. Session replay is opt-in and ships as a separate, lazily loaded bundle (rrweb inside, about 61 KB gzipped) that pages without replay never download.
 
@@ -28,7 +28,7 @@ Script tag (initializes itself when `data-key` is present):
 npm:
 
 ```ts
-import { Checked } from '@checked/browser'
+import { Checked } from 'checkd-browser'
 Checked.init({ key: 'ck_pub_...', environment: 'production', release: '1.4.2' })
 ```
 
@@ -94,7 +94,7 @@ Input values are never read. Query strings and hashes are stripped from the page
 ```
 
 ```ts
-Checked.init({ key, replay: { onErrorSampleRate: 1, sampleRate: 0, load: () => import('@checked/browser/replay') } })
+Checked.init({ key, replay: { onErrorSampleRate: 1, sampleRate: 0, load: () => import('checkd-browser/replay') } })
 ```
 
 | Option | Default | Script tag | Notes |
@@ -110,7 +110,7 @@ Checked.init({ key, replay: { onErrorSampleRate: 1, sampleRate: 0, load: () => i
 | `load` | | | for bundlers, used instead of `src` |
 | `endpoint` | events endpoint with `/replay` | | |
 
-The core loads the replay bundle with the same version as itself (`checked-replay.v1.1.0.min.js` for core 1.1.0); `checked-replay.v1.min.js` follows 1.x for manual use. `window.CheckedReplay.stop()` (or `stopReplay()` from `@checked/browser/replay`) stops recording, for example when consent is withdrawn.
+The core loads the replay bundle with the same version as itself (`checked-replay.v1.1.0.min.js` for core 1.1.0); `checked-replay.v1.min.js` follows 1.x for manual use. `window.CheckedReplay.stop()` (or `stopReplay()` from `checkd-browser/replay`) stops recording, for example when consent is withdrawn.
 
 Privacy defaults: every input, textarea and select masked (passwords as a fixed `********`), no canvas, no cross-origin iframes, no inlined images or fonts, query strings removed from page, link, form and iframe addresses, nothing at all with Do Not Track or Global Privacy Control. Next to the rrweb stream the recorder writes compact action events (what was clicked or typed into, never values, password fields not even their length) that the server uses for the AI summary and "Save as journey".
 
