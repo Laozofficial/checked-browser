@@ -1,4 +1,6 @@
 /** Wire protocol and public option types for @checked/browser. */
+import type { ReplayOptions } from './replay'
+
 
 export type EventType = 'error' | 'request' | 'performance' | 'custom'
 
@@ -148,5 +150,7 @@ export interface CheckedOptions {
   maxEventsPerPage?: number
   /** Advanced: flush interval in ms. Default 5000. */
   flushIntervalMs?: number
+  /** Session replay, off unless given. Loads the replay bundle lazily. See ReplayOptions. */
+  replay?: ReplayOptions
   debug?: boolean
 }

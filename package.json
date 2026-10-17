@@ -1,7 +1,7 @@
 {
   "name": "@checked/browser",
-  "version": "1.0.0",
-  "description": "Check’d production monitoring for the browser: errors, failed requests, Web Vitals and custom events.",
+  "version": "1.1.0",
+  "description": "Check’d production monitoring for the browser: errors, failed requests, Web Vitals, custom events and opt-in session replay.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -13,7 +13,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
     },
-    "./checked.min.js": "./dist/checked.min.js"
+    "./replay": {
+      "types": "./dist/replay/index.d.ts",
+      "import": "./dist/replay.mjs"
+    },
+    "./checked.min.js": "./dist/checked.min.js",
+    "./checked-replay.min.js": "./dist/checked-replay.min.js"
   },
   "files": [
     "dist",
@@ -28,6 +33,7 @@
     "@types/node": "22.9.0",
     "esbuild": "0.24.0",
     "jsdom": "25.0.1",
+    "rrweb": "2.1.6",
     "typescript": "5.6.3",
     "vitest": "2.1.4"
   }

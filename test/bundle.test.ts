@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFetch, settle } from './helpers'
+import { SDK_VERSION } from '../src/version'
 
 const bundle = join(__dirname, '..', 'dist', 'checked.min.js')
 
@@ -26,7 +28,7 @@ describe.skipIf(!existsSync(bundle))('built IIFE bundle', () => {
     const w = window as unknown as {
       Checked: { captureError(e: unknown): void; flush(): Promise<boolean>; version: string }
     }
-    expect(w.Checked.version).toBe('1.0.0')
+    expect(w.Checked.version).toBe(SDK_VERSION)
     expect(window.fetch).not.toBe(h.fetchMock)
     w.Checked.captureError(new Error('from bundle'))
     await w.Checked.flush()
@@ -34,5 +36,27 @@ describe.skipIf(!existsSync(bundle))('built IIFE bundle', () => {
     expect(h.ingestUrls[0]).toBe('https://cdn.example.com/api/v1/ingest/events?key=ck_pub_bundle')
     const ev = h.events()[0]
     expect(ev).toMatchObject({ type: 'error', environment: 'production', release: '2.0.0' })
+  })
+})
+
+const replayBundle = join(__dirname, '..', 'dist', 'checked-replay.min.js')
+
+describe.skipIf(!existsSync(bundle) || !existsSync(replayBundle))('size budgets', () => {
+  it('the core stays under 10 KB gzipped and carries no rrweb', () => {
+    const core = readFileSync(bundle)
+    expect(gzipSync(core, { level: 9 }).length).toBeLessThanOrEqual(10 * 1024)
+    const text = core.toString('utf8')
+    expect(text).not.toContain('takeFullSnapshot')
+    expect(text).not.toContain('rr_width')
+  })
+
+  it('the replay bundle stays under 70 KB gzipped and registers window.CheckedReplay', () => {
+    const rep = readFileSync(replayBundle)
+    expect(gzipSync(rep, { level: 9 }).length).toBeLessThanOrEqual(70 * 1024)
+    ;(0, eval)(rep.toString('utf8'))
+    const w = window as unknown as { CheckedReplay?: { createReplay: unknown; version: string } }
+    expect(typeof w.CheckedReplay!.createReplay).toBe('function')
+    expect(w.CheckedReplay!.version).toBe(SDK_VERSION)
+    delete (window as { CheckedReplay?: unknown }).CheckedReplay
   })
 })

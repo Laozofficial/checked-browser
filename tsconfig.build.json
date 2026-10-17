@@ -8,5 +8,5 @@
     "types": []
   },
   "include": ["src"],
-  "exclude": ["src/iife.ts"]
+  "exclude": ["src/iife.ts", "src/replay-iife.ts", "src/player"]
 }
